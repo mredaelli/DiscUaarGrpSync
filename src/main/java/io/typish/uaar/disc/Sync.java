@@ -1,5 +1,7 @@
 package io.typish.uaar.disc;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -49,6 +51,10 @@ class Sync {
     private final String group_prefix;
     private final Map<String, String> authFormData = new HashMap<>();
     private final int STEP;
+    private Set<String> forListacircoli;
+
+    private PreparedStatement stmt;
+
 
     private Map<String, Integer> groups;
 
@@ -56,10 +62,11 @@ class Sync {
         Connection connection = null;
         try {
             groups = readGroups();
+            forListacircoli = new HashSet<>(Files.readAllLines(Paths.get("listacircoli.txt")));
 
             Class.forName(dbClass);
             connection = DriverManager.getConnection(dbUrl);
-            final PreparedStatement stmt = connection.prepareStatement(query);
+            stmt = connection.prepareStatement(query);
 
             int offset = 0;
             int read = 0;
@@ -69,12 +76,12 @@ class Sync {
                 final JsonObject partialRes = getAPieceOfUsers(offset, STEP);
                 total = partialRes.get("meta").getAsJsonObject().get("total").getAsInt();
 
-                final JsonArray users = partialRes.get("members")
+                final JsonArray discUsers = partialRes.get("members")
                         .getAsJsonArray();
 
-                users.forEach(us -> processUser(stmt, us));
+                discUsers.forEach(this::processUser);
 
-                read += users.size();
+                read += discUsers.size();
                 offset = read;
             } while(total > read);
 
@@ -85,32 +92,51 @@ class Sync {
         }
     }
 
-    private void processUser(final PreparedStatement stmt, final JsonElement us) {
+    private String getCircoloFromTesserateo(final User u) {
         try {
-            final User u = new User();
-
-            u.username = us.getAsJsonObject().get("username").getAsString();
-            System.out.println("Processing "+u.username);
-
-            final Set<String> userGroups = readUser(u);
-            if( userGroups == null ) return;
 
             stmt.setString(1, u.email);
             final ResultSet rs = stmt.executeQuery();
+            String res = null;
             if( rs.next() ) {
-                u.circolo = rs.getString("circolo");
+                res = rs.getString("circolo");
                 if( rs.next() ) throw new Exception("More than one " + u.email);
+            } else {
+                System.out.println("Not found " + u.email);
+            }
+            return res;
+        } catch(final Exception e ){
+            e.printStackTrace();
+            return null;
+        }
+    }
 
-                System.out.println("* " + u.email + " -> " + u.circolo);
+    private void processUser(final JsonElement du) {
+        try {
+            final User u = new User();
 
-                if( userGroups.contains(u.circolo) )
-                    userGroups.remove(u.circolo);
-                else
-                    addUserToGroup(u);
+            u.username = du.getAsJsonObject().get("username").getAsString();
+            System.out.println("Processing "+u.username);
 
-                removeUserFromGroups(u, userGroups);
+            final Set<String> userGroups = getUsergropsFromDisc(u);
+            if( userGroups == null ) return;
 
-            } else System.out.println("Not found " + u.email);
+            // trova il circolo di appartenenza da tesserateo
+            u.circolo = getCircoloFromTesserateo(u);
+            if( u.circolo != null ) {
+                if( userGroups.contains(u.circolo) ) userGroups.remove(u.circolo);
+                else addUserToGroup(u, u.circolo);
+            }
+
+            // lista circoli?
+            if( forListacircoli.contains(u.email) ) {
+                System.out.println("In lista circoli");
+                if( userGroups.contains("listacircoli") ) userGroups.remove("listacircoli");
+                else addUserToGroup(u, "listacircoli");
+            }
+
+            removeUserFromGroups(u, userGroups);
+
         } catch (final Exception e) {
             e.printStackTrace();
         }
@@ -138,18 +164,18 @@ class Sync {
         return res;
     }
 
-    private Set<String> readUser(final User u) throws Exception {
-        final JsonObject user = loadUserDetails(u);
+    private Set<String> getUsergropsFromDisc(final User u) throws Exception {
+        final JsonObject discUser = loadUserDetailsFromDisc(u);
 
-        if( user.get("email") == null ) return null;
+        if( discUser.get("email") == null ) return null;
 
-        u.email = user.get("email")
+        u.email = discUser.get("email")
                 .getAsString();
-        u.id = user.get("id")
+        u.id = discUser.get("id")
                 .getAsInt();
 
         final Set<String> userGroups = new HashSet<>();
-        user.get("groups").getAsJsonArray().forEach( g -> {
+        discUser.get("groups").getAsJsonArray().forEach( g -> {
             final JsonObject group = g.getAsJsonObject();
             final String name = group.get("name").getAsString();
             if( name.startsWith(group_prefix) )
@@ -158,7 +184,7 @@ class Sync {
         return userGroups;
     }
 
-    private JsonObject loadUserDetails(final User u) throws Exception {
+    private JsonObject loadUserDetailsFromDisc(final User u) throws Exception {
         final HttpRequest resUser = HttpRequest.get(base + "/users/"+u.username+".json?show_emails=true&" + auth)
                 .trustAllCerts()
                 .accept("application/json");
@@ -186,10 +212,10 @@ class Sync {
         }
     }
 
-    private void addUserToGroup(final User u) throws Exception {
+    private void addUserToGroup(final User u, final String group) throws Exception {
         final Map<String, String> send = new HashMap<>(authFormData);
         send.put("usernames", u.username);
-        final HttpRequest resUsers = HttpRequest.put(base + "groups/"+groups.get(u.circolo)+"/members.json?")
+        final HttpRequest resUsers = HttpRequest.put(base + "groups/"+groups.get(group)+"/members.json?")
                 .trustAllCerts()
                 .accept("application/json")
                 .form(send);
