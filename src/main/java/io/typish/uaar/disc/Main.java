@@ -1,13 +1,12 @@
 package io.typish.uaar.disc;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
 
 public class Main {
-    public static void main(final String[] args) throws IOException {
+    public static void main(final String[] args) throws Exception {
         final String key;
         final String pFile;
         switch( args.length ) {
