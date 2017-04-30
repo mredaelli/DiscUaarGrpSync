@@ -83,19 +83,20 @@ class Sync {
 
             // trova il circolo di appartenenza da tesserateo
             u.circolo = tesserateo.circoloDaUtente(u);
+
             if( u.circolo != null ) {
                 if( userGroups.contains(u.circolo) ) userGroups.remove(u.circolo);
-                else discUaar.addUserToGroup(u, u.circolo);
+                else System.out.println(u.circolo + 1);;//discUaar.addUserToGroup(u, u.circolo);
             }
 
             // lista circoli?
             if( forListacircoli.contains(u.email) ) {
                 System.out.println("In lista circoli");
                 if( userGroups.contains(gruppoListaCircoli) ) userGroups.remove(gruppoListaCircoli);
-                else discUaar.addUserToGroup(u, gruppoListaCircoli);
+                else System.out.println(2); //discUaar.addUserToGroup(u, gruppoListaCircoli);
             }
 
-            discUaar.removeUserFromGroups(u, userGroups);
+            //discUaar.removeUserFromGroups(u, userGroups);
 
         } catch (final Exception e) {
             e.printStackTrace();

@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Date;
 
 class Tesserateo implements AutoCloseable {
 
@@ -20,6 +21,7 @@ class Tesserateo implements AutoCloseable {
         try {
 
             stmt.setString(1, u.email);
+            stmt.setInt(2, 1900 + new Date().getYear());
             final ResultSet rs = stmt.executeQuery();
             String res = null;
             if( rs.next() ) {
