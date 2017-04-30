@@ -11,15 +11,14 @@ class Tesserateo implements AutoCloseable {
     private final Connection connection;
     private final PreparedStatement stmt;
 
-    Tesserateo(final String dbClass, final String dbUrl, final String query) throws Exception {
+    Tesserateo(final String dbClass, final String dbUrl, final String dbUser, final String dbPassword, final String query) throws Exception {
         Class.forName(dbClass);
-        connection = DriverManager.getConnection(dbUrl);
+        connection = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
         stmt = connection.prepareStatement(query);
     }
 
     String circoloDaUtente(final User u) {
         try {
-
             stmt.setString(1, u.email);
             stmt.setInt(2, 1900 + new Date().getYear());
             final ResultSet rs = stmt.executeQuery();
@@ -28,7 +27,7 @@ class Tesserateo implements AutoCloseable {
                 res = rs.getString("circolo");
                 if( rs.next() ) throw new Exception("More than one " + u.email);
             } else {
-                System.out.println("Not found " + u.email);
+                System.err.println("Not found " + u.email);
             }
             return res;
         } catch(final Exception e ){

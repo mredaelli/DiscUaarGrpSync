@@ -1,16 +1,22 @@
 package io.typish.uaar.disc;
 
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import static java.lang.Thread.sleep;
+
 class Sync {
+
+    private static final Pattern COMPILE = Pattern.compile("[^0-9a-zA-Z_]");
 
     Sync(final Properties p) throws Exception {
 
@@ -23,7 +29,7 @@ class Sync {
             group_prefix = p.getProperty("group_prefix"),
             base = p.getProperty("baseURL"),
             auth = "api_key="+ api_key +"&api_username="+ api_user;
-        discUaar = new DiscUaar(base, auth, group_prefix, api_key, api_user);
+        discUaar = new DiscUaar(base, auth, group_prefix, gruppoListaCircoli, api_key, api_user);
 
         props = p;
     }
@@ -40,12 +46,14 @@ class Sync {
     void run() {
         final String query = props.getProperty("dbQuery"),
                 dbClass = props.getProperty("dbClass"),
-                dbUrl = props.getProperty("dbUrl");
+                dbUrl = props.getProperty("dbUrl"),
+                dbUser = props.getProperty("dbUser"),
+                dbPassword = props.getProperty("dbPassword");
 
-        try( Tesserateo t = new Tesserateo(dbClass, dbUrl, query) ) {
+        try( Tesserateo t = new Tesserateo(dbClass, dbUrl, dbUser, dbPassword, query) ) {
             tesserateo = t;
 
-            forListacircoli = new HashSet<>(Files.readAllLines(Paths.get(file_listacircoli)));
+            forListacircoli = new HashSet<>(Files.readAllLines(Paths.get(file_listacircoli), Charset.forName("UTF-8")));
 
             int offset = 0;
             int read = 0;
@@ -58,10 +66,13 @@ class Sync {
                 final JsonArray discUsers = partialRes.get("members")
                         .getAsJsonArray();
 
-                discUsers.forEach(this::processUser);
+                for( final JsonElement u: discUsers ) processUser(u);
 
                 read += discUsers.size();
                 offset = read;
+
+                System.out.println("waiting");
+                sleep(10000L);
             } while(total > read);
 
         } catch (final Exception e) {
@@ -78,25 +89,32 @@ class Sync {
             u.username = du.getAsJsonObject().get("username").getAsString();
             System.out.println("Processing "+u.username);
 
-            final Set<String> userGroups = discUaar.getGroupsForUser(u);
-            if( userGroups == null ) return;
+            Set<String> userGroups = discUaar.getUserDetailsAndGroups(u);
+            if( u.email == null ) {
+                System.err.println("No email for user "+u.username);
+                return;
+            }
+
+            if( userGroups == null ) userGroups = new HashSet<>();
 
             // trova il circolo di appartenenza da tesserateo
             u.circolo = tesserateo.circoloDaUtente(u);
 
             if( u.circolo != null ) {
-                if( userGroups.contains(u.circolo) ) userGroups.remove(u.circolo);
-                else System.out.println(u.circolo + 1);;//discUaar.addUserToGroup(u, u.circolo);
+                String circGroup = props.get("group_prefix") + COMPILE.matcher(u.circolo).replaceAll("")
+                        .toLowerCase();
+                circGroup = circGroup.substring(0, Math.min(circGroup.length(), 20));
+                if( userGroups.contains(circGroup) ) userGroups.remove(circGroup);
+                else discUaar.addUserToGroup(u, circGroup);
             }
 
             // lista circoli?
             if( forListacircoli.contains(u.email) ) {
-                System.out.println("In lista circoli");
                 if( userGroups.contains(gruppoListaCircoli) ) userGroups.remove(gruppoListaCircoli);
-                else System.out.println(2); //discUaar.addUserToGroup(u, gruppoListaCircoli);
+                else discUaar.addUserToGroup(u, gruppoListaCircoli);
             }
 
-            //discUaar.removeUserFromGroups(u, userGroups);
+            discUaar.removeUserFromGroups(u, userGroups);
 
         } catch (final Exception e) {
             e.printStackTrace();
