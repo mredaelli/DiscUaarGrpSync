@@ -25,7 +25,7 @@ class DiscUaar {
         this.base = base;
         this.auth = auth;
         this.group_prefix = group_prefix;
-        this.circoli_grp = circoliGrp;
+        circoli_grp = circoliGrp;
         authFormData.put("api_key", api_key);
         authFormData.put("api_username", api_user);
 
@@ -42,7 +42,7 @@ class DiscUaar {
         if( !resGroups.ok() )
             throw new Exception("Error 1 "+resGroups.message()+ ' ' +resGroups.code());
 
-        for( JsonElement g: parser.parse(resGroups.body()).getAsJsonArray() ) {
+        for( final JsonElement g: parser.parse(resGroups.body()).getAsJsonArray() ) {
             final JsonObject group = g.getAsJsonObject();
             final String name = group.get("name")
                     .getAsString();
@@ -62,7 +62,7 @@ class DiscUaar {
                 .getAsInt();
 
         final Set<String> userGroups = new HashSet<>();
-        for( JsonElement g: discUser.get("groups").getAsJsonArray() ) {
+        for( final JsonElement g: discUser.get("groups").getAsJsonArray() ) {
             final JsonObject group = g.getAsJsonObject();
             final String name = group.get("name").getAsString();
             if( name.startsWith(group_prefix) || circoli_grp.equals(name) )
@@ -119,12 +119,8 @@ class DiscUaar {
          Integer groupId = groups.get(group);
          if( groupId == null ) {
              groupId = createGroup(group);
-             if( groupId == null )
-                 return;
-             else {
-                 groups.put(group, groupId);
-                 System.out.println("Created " + group);
-             }
+             groups.put(group, groupId);
+             System.out.println("Created " + group);
          }
          final HttpRequest resUsers = HttpRequest.put(base + "groups/"+ groupId +"/members.json?")
                 .trustAllCerts()
@@ -137,7 +133,7 @@ class DiscUaar {
         }
     }
 
-    Integer createGroup(final String group) throws Exception {
+    private Integer createGroup(final String group) throws Exception {
         final Map<String, String> send = new HashMap<>(authFormData);
         send.put("group[name]", group);
         final HttpRequest resUsers = HttpRequest.post(base + "admin/groups")

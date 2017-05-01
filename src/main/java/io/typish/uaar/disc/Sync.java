@@ -1,8 +1,5 @@
 package io.typish.uaar.disc;
 
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -22,7 +19,8 @@ class Sync {
 
         STEP = Integer.valueOf(p.getProperty("userChunk"));
         gruppoListaCircoli = p.getProperty("gruppo_listacircoli");
-        file_listacircoli = p.getProperty("file_listacircoli");
+        listacircoli_sheet = p.getProperty("listacircoli_sheet");
+        listacircoli_sheet_range = p.getProperty("listacircoli_sheet_range");
 
         final String api_key = p.getProperty("api_key"),
             api_user = p.getProperty("api_user"),
@@ -37,7 +35,7 @@ class Sync {
 
     private final Properties props;
     private final int STEP;
-    private final String gruppoListaCircoli, file_listacircoli;
+    private final String gruppoListaCircoli, listacircoli_sheet, listacircoli_sheet_range;
     private Set<String> forListacircoli;
 
     private Tesserateo tesserateo;
@@ -53,7 +51,7 @@ class Sync {
         try( Tesserateo t = new Tesserateo(dbClass, dbUrl, dbUser, dbPassword, query) ) {
             tesserateo = t;
 
-            forListacircoli = new HashSet<>(Files.readAllLines(Paths.get(file_listacircoli), Charset.forName("UTF-8")));
+            forListacircoli = Sheet.getCircoliEmails(listacircoli_sheet, listacircoli_sheet_range);
 
             int offset = 0;
             int read = 0;

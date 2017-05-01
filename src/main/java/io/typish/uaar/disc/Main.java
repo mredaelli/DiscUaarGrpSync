@@ -6,7 +6,9 @@ import java.nio.file.Paths;
 import java.util.Properties;
 
 public class Main {
-    public static void main(final String[] args) throws Exception {
+
+       public static void main(final String[] args) throws Exception {
+
         final String pFile;
         switch( args.length ) {
             case 0:
