@@ -47,6 +47,7 @@ class Sync {
                 dbUrl = props.getProperty("dbUrl"),
                 dbUser = props.getProperty("dbUser"),
                 dbPassword = props.getProperty("dbPassword");
+        final int waitTime = Integer.parseInt(props.getProperty("waitTime"))*1000;
 
         try( Tesserateo t = new Tesserateo(dbClass, dbUrl, dbUser, dbPassword, query) ) {
             tesserateo = t;
@@ -70,7 +71,7 @@ class Sync {
                 offset = read;
 
                 System.out.println("waiting");
-                sleep(10000L);
+                sleep(waitTime);
             } while(total > read);
 
         } catch (final Exception e) {
