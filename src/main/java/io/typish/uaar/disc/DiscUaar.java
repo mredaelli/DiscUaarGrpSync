@@ -20,16 +20,17 @@ class DiscUaar {
     private final Map<String, String> authFormData = new HashMap<>();
     private final Map<String, Integer> groups;
     private final Collection<String> managedGroups = new HashSet<>();
-    private final boolean debug;
+    private final boolean debug, test;
 
 
-    DiscUaar(final String base, final String auth, final String group_prefix, final String circoliGrp, final String coordinatoriGrp, final String referentiGrp, final String cassieriGrp, final String api_key, final String api_user, final boolean debug) throws Exception {
+    DiscUaar(final String base, final String auth, final String group_prefix, final String circoliGrp, final String coordinatoriGrp, final String referentiGrp, final String cassieriGrp, final String api_key, final String api_user, final boolean debug, final boolean test) throws Exception {
         this.base = base;
         this.auth = auth;
         this.group_prefix = group_prefix;
         authFormData.put("api_key", api_key);
         authFormData.put("api_username", api_user);
         this.debug = debug;
+        this.test = test;
 
         managedGroups.add(circoliGrp);
         managedGroups.add(referentiGrp);
@@ -112,16 +113,18 @@ class DiscUaar {
         if( debug ) {
             final StringBuilder all = new StringBuilder();
             for( final String s : userGroups ) {
-                all.append(", ")
-                        .append(s);
+                all.append(", ").append(s);
             }
             System.out.println("removing " + u.email + " from " + all);
-            return;
         }
-        final Map<String, String> send = new HashMap<>(authFormData);
+        if( test )
+            return;
+
         for( final String group : userGroups ) {
+            final Map<String, String> send = new HashMap<>(authFormData);
             send.put("user_id", Integer.toString(u.id));
-            final HttpRequest resUsers = HttpRequest.delete(base + "groups/" + group + "/members.json")
+            final Integer groupId = groups.get(group);
+            final HttpRequest resUsers = HttpRequest.delete(base + "groups/" + groupId + "/members.json")
                     .trustAllCerts()
                     .accept("application/json")
                     .form(send);
@@ -131,10 +134,10 @@ class DiscUaar {
     }
 
     void addUserToGroup(final User u, final String group) throws Exception {
-        if( debug ) {
+        if( debug )
             System.out.println("adding " + u.email + " to " + group);
-            return;
-        }
+        if( test ) return;
+
         final Map<String, String> send = new HashMap<>(authFormData);
         send.put("usernames", u.username);
         Integer groupId = groups.get(group);
@@ -155,16 +158,18 @@ class DiscUaar {
     }
 
     private Integer createGroup(final String group) throws Exception {
-        if( debug ) {
+        if( debug )
             System.out.println("creating group " + group);
+        if( test )
             return -1;
-        }
+
         final Map<String, String> send = new HashMap<>(authFormData);
         send.put("group[name]", group);
         final HttpRequest resUsers = HttpRequest.post(base + "admin/groups")
                 .trustAllCerts()
                 .accept("application/json")
                 .form(send);
+
 
         if( !resUsers.ok() ) {
             System.err.println(resUsers.body());
@@ -175,6 +180,27 @@ class DiscUaar {
                 .getAsJsonObject("basic_group")
                 .get("id")
                 .getAsInt();
+    }
+
+    void aggiornaProfilo(final User user) throws Exception {
+        if( debug) System.out.println("setting data of " + user);
+        if( test )
+            return;
+
+        final Map<String, String> send = new HashMap<>(authFormData);
+        send.put("usernames", user.username);
+        send.put("name", user.nome);
+        send.put("location", user.citta);
+        send.put("user_fields[1]", user.circolo);
+        final HttpRequest resUsers = HttpRequest.put(base + "users/" + user.username + ".json")
+                .trustAllCerts()
+                .accept("application/json")
+                .form(send);
+
+        if( !resUsers.ok() ) {
+            System.err.println(resUsers.body());
+            throw new Exception("Error b");
+        }
     }
 
     JsonObject loadSomeUsers(final int offset, final int STEP) throws Exception {

@@ -42,22 +42,17 @@ class Tesserateo implements AutoCloseable {
         }
     }
 
-    String circoloDaUtente(final User u) {
-        try {
-            stmt.setString(1, u.email);
-            stmt.setInt(2, 1900 + new Date().getYear());
-            final ResultSet rs = stmt.executeQuery();
-            String res = null;
-            if( rs.next() ) {
-                res = rs.getString("circolo");
-                if( rs.next() ) throw new Exception("More than one " + u.email);
-            } else {
-                System.err.println("Not found " + u.email);
-            }
-            return res;
-        } catch(final Exception e ){
-            e.printStackTrace();
-            return null;
+    void caricaInfoUtente(final User u) throws Exception {
+        stmt.setString(1, u.email);
+        stmt.setInt(2, 1900 + new Date().getYear());
+        final ResultSet rs = stmt.executeQuery();
+        if( rs.next() ) {
+            u.circolo = rs.getString("circolo");
+            u.citta = rs.getString("citta");
+            u.nome = rs.getString("nome");
+            if( rs.next() ) throw new Exception("More than one " + u.email);
+        } else {
+            throw new Exception("Not found " + u.email);
         }
     }
 

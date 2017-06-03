@@ -5,9 +5,11 @@ class User {
     String circolo;
     int id;
     String username;
+    String nome;
+    String citta;
 
     @Override
     public String toString() {
-        return "User{" + "email='" + email + '\'' + ", circolo='" + circolo + '\'' + ", id=" + id + ", username='" + username + '\'' + '}';
+        return "User{" + "email='" + email + '\'' + ", circolo='" + circolo + '\'' + ", id=" + id + ", username='" + username + '\'' + ", nome='" + nome + '\'' + ", citta='" + citta + '\'' + '}';
     }
 }

@@ -30,7 +30,8 @@ class Sync {
             base = p.getProperty("baseURL"),
             auth = "api_key="+ api_key +"&api_username="+ api_user;
         final boolean debug = "true".equals(p.getProperty("debug"));
-        discUaar = new DiscUaar(base, auth, group_prefix, gruppoListaCircoli, gruppoCoordinatori, gruppoReferenti, gruppoCassieri, api_key, api_user, debug);
+        final boolean test = "true".equals(p.getProperty("test"));
+        discUaar = new DiscUaar(base, auth, group_prefix, gruppoListaCircoli, gruppoCoordinatori, gruppoReferenti, gruppoCassieri, api_key, api_user, debug, test);
 
         props = p;
     }
@@ -101,8 +102,10 @@ class Sync {
 
             if( userGroups == null ) userGroups = new HashSet<>();
 
-            // trova il circolo di appartenenza da tesserateo
-            u.circolo = tesserateo.circoloDaUtente(u);
+            tesserateo.caricaInfoUtente(u);
+
+            discUaar.aggiornaProfilo(u);
+
             final String circGroup = encodeCircolo(u.circolo);
             if( u.circolo != null ) {
                 if( userGroups.contains(circGroup) ) userGroups.remove(circGroup);
@@ -120,15 +123,21 @@ class Sync {
             if( ruolo != null ) switch( ruolo.ruoloInCircolo ) {
                 case COORDINATORE:
                     if( userGroups.contains(gruppoCoordinatori) ) userGroups.remove(gruppoCoordinatori);
-                    else discUaar.addUserToGroup(u, gruppoCoordinatori);
+                    else {
+                        discUaar.addUserToGroup(u, gruppoCoordinatori);
+                    }
                     break;
                 case CASSIERE:
                     if( userGroups.contains(gruppoCassieri) ) userGroups.remove(gruppoCassieri);
-                    else discUaar.addUserToGroup(u, gruppoCassieri);
+                    else {
+                        discUaar.addUserToGroup(u, gruppoCassieri);
+                    }
                     break;
                 case REFERENTE:
                     if( userGroups.contains(gruppoReferenti) ) userGroups.remove(gruppoReferenti);
-                    else discUaar.addUserToGroup(u, gruppoReferenti);
+                    else {
+                        discUaar.addUserToGroup(u, gruppoReferenti);
+                    }
                     break;
             }
 
