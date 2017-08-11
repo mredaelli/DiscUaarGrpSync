@@ -43,7 +43,7 @@ class DiscUaar {
     private Map<String, Integer> readGroups() throws Exception {
         final Map<String, Integer> res = new HashMap<>();
 
-        final HttpRequest resGroups = HttpRequest.get(base + "admin/groups.json?" + auth)
+        final HttpRequest resGroups = HttpRequest.get(base + "/groups/search.json?" + auth)
                 .trustAllCerts()
                 .accept("application/json");
 
