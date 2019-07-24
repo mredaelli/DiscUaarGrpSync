@@ -50,6 +50,7 @@ class Tesserateo implements AutoCloseable {
             u.circolo = rs.getString("circolo");
             u.citta = rs.getString("citta");
             u.nome = rs.getString("nome");
+            u.age = rs.getInt("age");
             if( rs.next() ) throw new Exception("More than one " + u.email);
         } else {
             throw new Exception("Not found " + u.email);

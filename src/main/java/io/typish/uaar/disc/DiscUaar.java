@@ -23,7 +23,7 @@ class DiscUaar {
     private final boolean debug, test;
 
 
-    DiscUaar(final String base, final String auth, final String group_prefix, final String circoliGrp, final String coordinatoriGrp, final String referentiGrp, final String cassieriGrp, final String api_key, final String api_user, final boolean debug, final boolean test) throws Exception {
+    DiscUaar(final String base, final String auth, final String group_prefix, final String circoliGrp, final String coordinatoriGrp, final String referentiGrp, final String cassieriGrp, final String giovaniGrp, final String api_key, final String api_user, final boolean debug, final boolean test) throws Exception {
         this.base = base;
         this.auth = auth;
         this.group_prefix = group_prefix;
@@ -36,6 +36,7 @@ class DiscUaar {
         managedGroups.add(referentiGrp);
         managedGroups.add(cassieriGrp);
         managedGroups.add(coordinatoriGrp);
+        managedGroups.add(giovaniGrp);
 
         groups = readGroups();
     }

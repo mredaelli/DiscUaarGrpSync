@@ -21,6 +21,8 @@ class Sync {
         gruppoCoordinatori = p.getProperty("gruppo_coordinatori");
         gruppoCassieri = p.getProperty("gruppo_cassieri");
         gruppoReferenti = p.getProperty("gruppo_referenti");
+        gruppoGiovani = p.getProperty("gruppo_giovani");
+        etaGiovane = Integer.parseInt(p.getProperty("eta_giovane"));
         listacircoli_sheet = p.getProperty("listacircoli_sheet");
         listacircoli_sheet_range = p.getProperty("listacircoli_sheet_range");
 
@@ -31,7 +33,7 @@ class Sync {
             auth = "api_key="+ api_key +"&api_username="+ api_user;
         final boolean debug = "true".equals(p.getProperty("debug"));
         final boolean test = "true".equals(p.getProperty("test"));
-        discUaar = new DiscUaar(base, auth, group_prefix, gruppoListaCircoli, gruppoCoordinatori, gruppoReferenti, gruppoCassieri, api_key, api_user, debug, test);
+        discUaar = new DiscUaar(base, auth, group_prefix, gruppoListaCircoli, gruppoCoordinatori, gruppoReferenti, gruppoCassieri, gruppoGiovani, api_key, api_user, debug, test);
 
         props = p;
     }
@@ -39,8 +41,9 @@ class Sync {
 
     private final Properties props;
     private final int STEP;
-    private final String gruppoListaCircoli, gruppoReferenti, gruppoCoordinatori, gruppoCassieri, listacircoli_sheet, listacircoli_sheet_range;
+    private final String gruppoListaCircoli, gruppoReferenti, gruppoCoordinatori, gruppoCassieri, gruppoGiovani, listacircoli_sheet, listacircoli_sheet_range;
     private Set<String> forListacircoli;
+    private final int etaGiovane;
 
     private Tesserateo tesserateo;
     private final DiscUaar discUaar;
@@ -61,7 +64,7 @@ class Sync {
             forListacircoli = Sheet.getCircoliEmails(listacircoli_sheet, listacircoli_sheet_range);
 
             int offset = 0;
-            int read = 0;
+            int read = offset;
             int total;
 
             do {
@@ -94,7 +97,11 @@ class Sync {
             u.username = du.getAsJsonObject().get("username").getAsString();
             System.out.println("Processing "+u.username);
 
+            // Lista dei gruppi dell'utente.
+            // Andremo man mano sottraendo dalla collezione i gruppi corretti
+            // e rimuoveremo tutti i rimanenti
             Set<String> userGroups = discUaar.getUserDetailsAndGroups(u);
+
             if( u.email == null ) {
                 System.err.println("No email for user "+u.username);
                 return;
@@ -139,6 +146,28 @@ class Sync {
                         discUaar.addUserToGroup(u, gruppoReferenti);
                     }
                     break;
+            }
+
+            // giovane?
+            if( u.age != null ) {
+                if (userGroups.contains(gruppoGiovani) ) {
+                    if( u.age > etaGiovane) {
+                        System.out.println("Rimuovo " + u.username + " dalla categoria giovani");
+                    } else {
+                        System.out.println("Mantengo " + u.username + " nella categoria giovani");
+                        userGroups.remove(gruppoGiovani);
+                    }
+                } else {
+                    if( u.age > etaGiovane) {
+                        System.out.println(u.username + " giustamente non e' nella categoria giovani");
+                    } else {
+                        System.out.println("Aggiungo " + u.username + " alla categoria giovani");
+                        discUaar.addUserToGroup(u, gruppoGiovani);
+                    }
+                }
+            } else {
+                // non rimuoviamo dai giovani se gia' inseriti e l'eta' non e' nota
+                userGroups.remove(gruppoGiovani);
             }
 
             discUaar.removeUserFromGroups(u, userGroups);
